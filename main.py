@@ -13,7 +13,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 # 🔹 Храним данные пользователей
 user_data = {}
 
-# 🔹 Вопросы викторины (пример, если их нет — добавь свои)
+# 🔹 Вопросы викторины
 questions = [
     {
         "q": "Что тебе больше нравится?",
@@ -68,4 +68,44 @@ def handle_message(message):
             if answer in q["options"]:
                 sphere = q["options"][answer]
                 user["scores"][sphere] += 1
-                user["step"]
+                user["step"] += 1
+                ask_question(message.chat.id)
+            else:
+                bot.send_message(message.chat.id, "⚠️ Пожалуйста, выбери один из предложенных вариантов.")
+        else:
+            finish_quiz(message.chat.id)
+
+def ask_question(chat_id):
+    user = user_data[chat_id]
+    step = user["step"]
+
+    if step < len(questions):
+        q = questions[step]
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        for option in q["options"].keys():
+            markup.add(option)
+        bot.send_message(chat_id, f"❓ {q['q']}", reply_markup=markup)
+    else:
+        finish_quiz(chat_id)
+
+def finish_quiz(chat_id):
+    user = user_data[chat_id]
+    scores = user["scores"]
+
+    best = max(scores, key=scores.get)
+    if best == "design":
+        result = "🎨 Тебе подойдёт профессия *ДИЗАЙНЕРА!* Ты творческий человек, который ценит стиль и визуальную гармонию."
+    elif best == "it":
+        result = "💻 Тебе подойдёт профессия *ПРОГРАММИСТА!* Ты логичный, усидчивый и любишь технологии."
+    else:
+        result = "🧠 Тебе подойдёт профессия *ПСИХОЛОГА!* Ты понимаешь эмоции и умеешь слушать людей."
+
+    bot.send_message(
+        chat_id,
+        f"✅ Викторина окончена!\n\n👤 *Имя:* {user['name']}\n📘 *Группа:* {user['group']}\n\n{result}",
+        parse_mode="Markdown",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+
+print("✅ Бот запущен...")
+bot.polling(none_stop=True)
